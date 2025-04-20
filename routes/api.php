@@ -30,6 +30,8 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Route pour le classement des plans d'affaires
     Route::get('/projets/classement', [AnalyseController::class, 'classementPlansAffaires']);
+
+    Route::patch('/projets/{id}', [ProjetController::class, 'update']);
 });
 
 // Route pour l'enregistrement des projets

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ProjetEnregistre;
+use App\Mail\ProjetStatusUpdate;
 use App\Models\Projet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -109,4 +110,62 @@ class ProjetController extends Controller
         }
     }
     
+    /**
+     * Met à jour le statut d'un projet (Validé ou Rejeté).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update(Request $request, $id)
+    {
+        // Validation du statut
+        $validator = Validator::make($request->all(), [
+            'statut' => 'required|string|in:Validé,Rejeté',
+            'justification' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation échouée. Le statut doit être "Validé" ou "Rejeté".',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Récupérer le projet
+            $projet = Projet::findOrFail($id);
+            
+            // Mettre à jour le statut
+            $projet->statut = $request->statut;
+            
+            // Mettre à jour la justification si elle est fournie
+            if ($request->has('justification')) {
+                $projet->justification = $request->justification;
+            }
+            
+            $projet->save();
+            
+            // Envoyer un email de notification
+            Mail::to($projet->email)->send(new ProjetStatusUpdate($projet));
+            
+            // Ajouter les URLs complètes pour les fichiers
+            $projet->cni_url = Storage::url($projet->cni);
+            $projet->piece_identite_url = Storage::url($projet->piece_identite);
+            $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Statut du projet mis à jour avec succès',
+                'data' => $projet
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la mise à jour du statut',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
