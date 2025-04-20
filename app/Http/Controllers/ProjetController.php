@@ -12,6 +12,29 @@ use Illuminate\Support\Facades\Validator;
 class ProjetController extends Controller
 {
     /**
+     * Récupère la liste des projets avec les URLs complètes pour les fichiers.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index()
+    {
+        $projets = Projet::orderBy('created_at', 'desc')->get();
+        
+        // Ajouter les URLs complètes pour les fichiers
+        foreach ($projets as $projet) {
+            $projet->cni_url = Storage::url($projet->cni);
+            $projet->piece_identite_url = Storage::url($projet->piece_identite);
+            $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Liste des projets récupérée avec succès',
+            'data' => $projets
+        ], 200);
+    }
+
+    /**
      * Enregistre un nouveau projet.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -85,22 +108,5 @@ class ProjetController extends Controller
             ], 500);
         }
     }
-
-    public function index()
-    {
-        $projets = Projet::orderBy('created_at', 'desc')->get();
-        
-        // Ajouter les URLs complètes pour les fichiers
-        foreach ($projets as $projet) {
-            $projet->cni_url = Storage::url($projet->cni);
-            $projet->piece_identite_url = Storage::url($projet->piece_identite);
-            $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Liste des projets récupérée avec succès',
-            'data' => $projets
-        ], 200);
-    }
+    
 }

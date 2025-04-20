@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AnalyseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [UserController::class, 'logout']);
 
     Route::get('/projets', [ProjetController::class, 'index']);
+    
+    // Route pour le classement des plans d'affaires
+    Route::get('/projets/classement', [AnalyseController::class, 'classementPlansAffaires']);
 });
 
 // Route pour l'enregistrement des projets
