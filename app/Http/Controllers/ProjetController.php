@@ -6,6 +6,7 @@ use App\Mail\ProjetEnregistre;
 use App\Models\Projet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ProjetController extends Controller
@@ -27,10 +28,10 @@ class ProjetController extends Controller
             'email' => 'required|string|email|max:255',
             'type_projet' => 'required|string|max:255',
             'forme_juridique' => 'required|string|max:255',
-            'num_cni' => 'required|string|max:11|unique:projets',
-            'cni' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:2048',
-            'piece_identite' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:2048',
-            'plan_affaire' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:2048',
+            'num_cni' => 'required|string|max:255|unique:projets',
+            'cni' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:1024',
+            'piece_identite' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:1024',
+            'plan_affaire' => 'required|file|mimes:pdf,doc,docx,jpg,png,jpeg|max:1024',
         ]);
 
         if ($validator->fails()) {
@@ -66,6 +67,11 @@ class ProjetController extends Controller
             // Envoi de l'email de confirmation
             Mail::to($projet->email)->send(new ProjetEnregistre($projet));
 
+            // Ajouter les URLs complètes pour les fichiers
+            $projet->cni_url = Storage::url($projet->cni);
+            $projet->piece_identite_url = Storage::url($projet->piece_identite);
+            $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Projet enregistré avec succès',
@@ -82,7 +88,15 @@ class ProjetController extends Controller
 
     public function index()
     {
-        $projets = Projet::all();
+        $projets = Projet::orderBy('created_at', 'desc')->get();
+        
+        // Ajouter les URLs complètes pour les fichiers
+        foreach ($projets as $projet) {
+            $projet->cni_url = Storage::url($projet->cni);
+            $projet->piece_identite_url = Storage::url($projet->piece_identite);
+            $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
+        }
+        
         return response()->json([
             'success' => true,
             'message' => 'Liste des projets récupérée avec succès',

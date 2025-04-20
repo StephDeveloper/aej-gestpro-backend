@@ -34,7 +34,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Confirmation d'enregistrement de votre projet</h1>
+        <h1>Confirmation de soumission de votre projet</h1>
     </div>
 
     <div class="content">

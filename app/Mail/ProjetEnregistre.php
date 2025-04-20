@@ -33,7 +33,7 @@ class ProjetEnregistre extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmation d\'enregistrement de votre projet',
+            subject: 'Confirmation de soumission de votre projet',
         );
     }
 
