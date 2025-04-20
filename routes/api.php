@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProjetController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AnalyseController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projets/classement', [AnalyseController::class, 'classementPlansAffaires']);
 
     Route::patch('/projets/{id}', [ProjetController::class, 'update']);
+    
+    // Route pour les statistiques du dashboard
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
 });
 
 // Route pour l'enregistrement des projets

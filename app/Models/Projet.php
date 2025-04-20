@@ -22,5 +22,6 @@ class Projet extends Model
         'piece_identite',
         'plan_affaire',
         'statut',
+        'justification',
     ];
 }
