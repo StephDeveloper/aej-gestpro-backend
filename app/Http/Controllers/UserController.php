@@ -12,9 +12,10 @@ class UserController extends Controller
 {
     public function register(Request $request)
     {
-        // Validation des données
-        $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255',
+        try {
+            // Validation des données
+            $validator = Validator::make($request->all(), [
+                'username' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
         ]);
@@ -41,13 +42,21 @@ class UserController extends Controller
                 'user' => $user
             ]
         ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de l\'inscription',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function login(Request $request)
     {
-        // Validation des données
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
+        try {
+            // Validation des données
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
@@ -77,28 +86,51 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Authentification réussie',
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de l\'authentification',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function logout(Request $request)
     {
-        // Suppression du token actuel
-        $request->user()->currentAccessToken()->delete();
+        try {
+            // Suppression du token actuel
+            $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Déconnexion réussie'
         ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la déconnexion',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function profile(Request $request)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $request->user()
-        ]);
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $request->user()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération du profil',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
