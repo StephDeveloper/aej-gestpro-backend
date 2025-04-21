@@ -18,30 +18,30 @@ class UserController extends Controller
                 'username' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
-        ]);
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation échouée',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Création de l'utilisateur
+            $user = User::create([
+                'username' => $request->username,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'Validation échouée',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Création de l'utilisateur
-        $user = User::create([
-            'username' => $request->username,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Inscription réussie',
-            'data' => [
-                'user' => $user
-            ]
-        ], 201);
+                'success' => true,
+                'message' => 'Inscription réussie',
+                'data' => [
+                    'user' => $user
+                ]
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -57,35 +57,35 @@ class UserController extends Controller
             // Validation des données
             $validator = Validator::make($request->all(), [
                 'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+                'password' => 'required|string',
+            ]);
 
-        if ($validator->fails()) {
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation échouée',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Tentative d'authentification
+            if (!Auth::attempt($request->only('email', 'password'))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email ou mot de passe incorrect'
+                ], 401);
+            }
+
+            // Récupération de l'utilisateur
+            $user = User::where('email', $request->email)->firstOrFail();
+            
+            // Suppression des anciens tokens et création d'un nouveau
+            $user->tokens()->delete();
+            $token = $user->createToken('auth_token')->plainTextToken;
+
             return response()->json([
-                'success' => false,
-                'message' => 'Validation échouée',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // Tentative d'authentification
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email ou mot de passe incorrect'
-            ], 401);
-        }
-
-        // Récupération de l'utilisateur
-        $user = User::where('email', $request->email)->firstOrFail();
-        
-        // Suppression des anciens tokens et création d'un nouveau
-        $user->tokens()->delete();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Authentification réussie',
+                'success' => true,
+                'message' => 'Authentification réussie',
                 'user' => $user,
                 'access_token' => $token,
                 'token_type' => 'Bearer',

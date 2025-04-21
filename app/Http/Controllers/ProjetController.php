@@ -154,6 +154,15 @@ class ProjetController extends Controller
                 // Récupérer le projet
                 $projet = Projet::findOrFail($id);
                 
+                // Vérifier si le statut actuel est 'en cours'
+                if ($projet->statut !== 'en cours') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Impossible de modifier le statut. Le projet a déjà été validé ou rejeté.',
+                        'data' => $projet
+                    ], 400);
+                }
+                
                 // Mettre à jour le statut
                 $projet->statut = $request->statut;
                 
