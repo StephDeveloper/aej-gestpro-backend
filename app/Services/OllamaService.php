@@ -77,87 +77,252 @@ class OllamaService
     public function analyzeBusinessPlan(string $text): array
     {
         try {
-            $prompt = "Tu es un expert en analyse de plans d'affaires en Côte d'Ivoire avec une connaissance approfondie du marché local.
-
-TÂCHE:
-Analyse ce plan d'affaires et évalue-le selon les critères suivants avec une note sur 10 pour chaque critère:
-1. Viabilité économique dans le contexte ivoirien
-2. Innovation et différenciation sur le marché local
-3. Compréhension des contraintes réglementaires locales
-4. Stratégie financière et modèle de revenus
-5. Potentiel de croissance et impact économique
-
-FORMAT DE RÉPONSE ATTENDU (respecte exactement ce format en JSON):
-{
-  \"note_globale\": (note moyenne sur 10),
-  \"criteres\": {
-    \"viabilite_economique\": (note sur 10),
-    \"innovation\": (note sur 10),
-    \"conformite_reglementaire\": (note sur 10),
-    \"strategie_financiere\": (note sur 10),
-    \"potentiel_croissance\": (note sur 10)
-  },
-  \"forces\": [\"force 1\", \"force 2\", ...],
-  \"faiblesses\": [\"faiblesse 1\", \"faiblesse 2\", ...],
-  \"recommandations\": \"(recommandations détaillées adaptées au marché ivoirien, max 300 mots)\"
-}
-
-Voici le plan d'affaires à analyser:
-
-$text";
+            $transformedText = $this->transformText($text, 1000);
             
-            $response = Http::post($this->baseUrl, [
-                'model' => $this->model,
-                'prompt' => $prompt,
-                'stream' => false,
-                'temperature' => 0.7,
-                'max_tokens' => 2048,
-            ]);
+            $prompt = "Tu es un expert en analyse de plans d'affaires en Cote d'Ivoire avec une connaissance approfondie du marché local ivoirien. Analyse ce plan d'affaires {$transformedText} et évalue-le selon les critères suivants avec une note sur 100 pour chaque critère : 
+            Tu dois retourner un JSON valide avec les clés suivantes:
+            - note_globale: note moyenne sur 100
+            - criteres: un objet avec les notes pour chaque critère
+            - forces: un tableau de forces identifiées
+            - faiblesses: un tableau de faiblesses identifiées
+            - recommandations: une chaîne de recommandations détaillées adaptées au marché ivoirien, max 300 mots";
             
-            if ($response->successful()) {
-                $aiResponse = $response->json('response') ?? "Aucune recommandation générée.";
+            // Vérifier si l'URL d'API est correcte et accessible
+            $apiUrl = $this->baseUrl;
+            
+            // Log de l'URL utilisée pour le debugging
+            Log::info("Tentative de connexion à l'API Ollama: " . $apiUrl);
+            
+            $response = Http::timeout(120)
+                ->connectTimeout(30)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_TCP_KEEPALIVE => 1,
+                        CURLOPT_TCP_KEEPIDLE => 60,
+                        CURLOPT_TCP_NODELAY => 1,
+                    ]
+                ])
+                ->retry(3, 2000, function ($exception) {
+                    Log::warning("Retry triggered: " . $exception->getMessage());
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException ||
+                            $exception instanceof \Illuminate\Http\Client\RequestException;
+                })
+                ->post($apiUrl, [
+                    'model' => $this->model,
+                    'prompt' => $prompt,
+                    'stream' => false,
+                    'format' => 'json',
+                    'temperature' => 0.3,
+                    'top_p' => 0.8,
+                    'num_predict' => 100,
+                    'context_window' => 2048, // Limiter la taille du contexte
+                    'repeat_penalty' => 1.1
+                ]);
+            
+            if (!$response->successful()) {
+                Log::error('Erreur API Ollama: ' . $response->status() . ' - ' . $response->body());
                 
-                // Extraire le JSON de la réponse (l'IA peut renvoyer du texte avant/après le JSON)
-                preg_match('/{.*}/s', $aiResponse, $matches);
-                
-                if (!empty($matches[0])) {
-                    try {
-                        $result = json_decode($matches[0], true);
-                        if (json_last_error() === JSON_ERROR_NONE) {
-                            return $result;
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Erreur de parsing JSON: ' . $e->getMessage());
+                // Si l'erreur est 404, c'est probablement une URL incorrecte
+                if ($response->status() == 404) {
+                    // Essayer avec une URL alternative
+                    $altUrl = str_replace('/api/generate', '/api/generate', $apiUrl);
+                    Log::info("Tentative avec URL alternative: " . $altUrl);
+                    
+                    $response = Http::timeout(120)
+                        ->connectTimeout(30)
+                        ->retry(2, 1000)
+                        ->post($altUrl, [
+                            'model' => $this->model,
+                            'messages' => [
+                                ['role' => 'user', 'content' => $prompt]
+                            ],
+                            'format' => 'json',
+                            'stream' => false
+                        ]);
+                    
+                    if (!$response->successful()) {
+                        throw new \Exception('API Ollama inaccessible: URL originale et alternative incorrectes');
                     }
+                    
+                    // Si on a réussi avec l'URL alternative, on a un format différent
+                    $responseContent = $response->json();
+                    if (isset($responseContent['message']['content'])) {
+                        $jsonStr = $responseContent['message']['content'];
+                        preg_match('/{.*}/s', $jsonStr, $jsonMatches);
+                        
+                        if (!empty($jsonMatches[0])) {
+                            return json_decode($jsonMatches[0], true) ?: $this->getDefaultAnalysisResult('Erreur de décodage JSON');
+                        }
+                    }
+                    
+                    throw new \Exception('Format de réponse invalide depuis l\'API alternative');
                 }
                 
-                // Fallback si le JSON n'est pas valide
-                return [
-                    'note_globale' => 0,
-                    'criteres' => [
-                        'viabilite_economique' => 0,
-                        'innovation' => 0,
-                        'conformite_reglementaire' => 0,
-                        'strategie_financiere' => 0,
-                        'potentiel_croissance' => 0
-                    ],
-                    'forces' => [],
-                    'faiblesses' => [],
-                    'recommandations' => $aiResponse
-                ];
-            } else {
-                Log::error('Erreur Ollama: ' . $response->body());
-                return [
-                    'note_globale' => 0,
-                    'recommandations' => "Une erreur s'est produite lors de l'analyse du plan d'affaires."
-                ];
+                return $this->getDefaultAnalysisResult("Erreur HTTP " . $response->status());
             }
+            
+            $responseData = $response->json();
+            
+            if (!isset($responseData['response'])) {
+                throw new \Exception('Réponse invalide: clé "response" manquante');
+            }
+            
+            // Extraire la partie JSON de la réponse
+            preg_match('/{.*}/s', $responseData['response'], $matches);
+            
+            if (empty($matches[0])) {
+                Log::warning('Format de réponse Ollama invalide: ' . $responseData['response']);
+                
+                // Tenter de nettoyer la réponse pour extraire un JSON valide
+                $cleanedResponse = preg_replace('/```json|```/', '', $responseData['response']);
+                $jsonData = json_decode(trim($cleanedResponse), true);
+                
+                if (!$jsonData) {
+                    return $this->getDefaultAnalysisResult("Format de réponse invalide");
+                }
+                
+                return $jsonData;
+            }
+            
+            $analysisResult = json_decode($matches[0], true);
+            
+            if (!$analysisResult) {
+                Log::error('Erreur de décodage JSON: ' . $matches[0]);
+                return $this->getDefaultAnalysisResult("Erreur de décodage JSON");
+            }
+            
+            return $analysisResult;
+            
         } catch (\Exception $e) {
             Log::error('Erreur lors de l\'analyse avec Ollama: ' . $e->getMessage());
-            return [
-                'note_globale' => 0,
-                'recommandations' => "Une erreur s'est produite lors de l'analyse du plan d'affaires avec l'IA."
-            ];
+            return $this->getDefaultAnalysisResult($e->getMessage());
+        }
+    }
+
+    /**
+     * Retourne un résultat d'analyse par défaut en cas d'erreur
+     */
+    private function getDefaultAnalysisResult(string $errorMessage): array
+    {
+        return [
+            'note_globale' => 0,
+            'criteres' => [
+                'viabilite_economique' => 0,
+                'innovation' => 0,
+                'conformite_reglementaire' => 0,
+                'strategie_financiere' => 0,
+                'potentiel_croissance' => 0
+            ],
+            'forces' => ['Non évalué'],
+            'faiblesses' => ['Non évalué'],
+            'recommandations' => "Une erreur s'est produite lors de l'analyse du plan d'affaires avec l'IA: " . $errorMessage
+        ];
+    }
+
+    private function transformText($texte, $longueurMax)
+    {
+        try {
+            // Sauvegarder la longueur originale du texte
+            $longueurOriginale = mb_strlen($texte);
+            
+            // Translittération des caractères accentués, mais de façon plus douce
+            // On préserve les caractères non-latins (comme les caractères asiatiques)
+            $texte = transliterator_transliterate('Any-Latin; Latin-ASCII; [:Nonspacing Mark:] Remove;', $texte);
+            
+            // Nettoyage plus sélectif des caractères problématiques
+            $texte = str_replace(["\u2019", "\u2018", "\u201C", "\u201D"], ["'", "'", '"', '"'], $texte);
+            
+            // Nettoyage du texte sans être trop agressif
+            $texte = preg_replace('/\s{2,}/', ' ', $texte); // Remplacer les espaces multiples par un seul
+            $texte = str_replace(["\r\n\r\n", "\n\n"], [". ", ". "], $texte); // Convertir les paragraphes en phrases
+            $texte = preg_replace('/[\r\n\t]+/', ' ', $texte); // Remplacer les retours à la ligne simples
+            $texte = trim($texte);
+            
+            // Si le texte est déjà assez court, retourner tel quel
+            if (mb_strlen($texte) <= $longueurMax) {
+                return $texte;
+            }
+            
+            // Pour les textes longs, sélectionner stratégiquement les parties importantes
+            $resumeIntelligent = '';
+            
+            // Diviser en paragraphes, puis en phrases
+            $paragraphes = preg_split('/\. /', $texte);
+            
+            // Si longueur maximale est très courte, sélectionner seulement le début et la fin
+            if ($longueurMax < 1000) {
+                // Prendre le premier paragraphe (introduction)
+                if (count($paragraphes) > 0) {
+                    $resumeIntelligent .= $paragraphes[0] . ". ";
+                }
+                
+                // Prendre quelques informations du milieu
+                if (count($paragraphes) > 5) {
+                    $milieu = (int)(count($paragraphes) / 2);
+                    $resumeIntelligent .= $paragraphes[$milieu] . ". ";
+                }
+                
+                // Prendre la fin (conclusion)
+                if (count($paragraphes) > 2) {
+                    $resumeIntelligent .= $paragraphes[count($paragraphes) - 1] . ". ";
+                }
+                
+                // Si le résumé est encore trop long, couper
+                if (mb_strlen($resumeIntelligent) > $longueurMax) {
+                    $resumeIntelligent = mb_substr($resumeIntelligent, 0, $longueurMax - 3) . "...";
+                }
+                
+                return $resumeIntelligent;
+            }
+            
+            // Pour les textes plus longs, utiliser un échantillonnage plus complet
+            $nb_paragraphes_a_garder = ceil($longueurMax / 200); // Environ 200 caractères par paragraphe en moyenne
+            
+            if (count($paragraphes) <= $nb_paragraphes_a_garder) {
+                // Si on a moins de paragraphes que nécessaire, on garde tout
+                return $texte;
+            }
+            
+            // Sélection des paragraphes clés
+            $paragraphes_selectionnes = [];
+            
+            // Toujours garder le premier paragraphe (introduction)
+            $paragraphes_selectionnes[] = $paragraphes[0];
+            
+            // Toujours garder le dernier paragraphe (conclusion)
+            $paragraphes_selectionnes[] = $paragraphes[count($paragraphes) - 1];
+            
+            // Répartir le reste des paragraphes à garder uniformément dans le document
+            $nb_restants = $nb_paragraphes_a_garder - 2;
+            if ($nb_restants > 0) {
+                $intervalle = (count($paragraphes) - 2) / ($nb_restants + 1);
+                for ($i = 1; $i <= $nb_restants; $i++) {
+                    $index = round($i * $intervalle);
+                    if ($index > 0 && $index < count($paragraphes) - 1) {
+                        $paragraphes_selectionnes[] = $paragraphes[$index];
+                    }
+                }
+            }
+            
+            // Trier les indices pour préserver l'ordre original
+            sort($paragraphes_selectionnes);
+            
+            // Combiner les paragraphes sélectionnés
+            $resumeIntelligent = implode(". ", $paragraphes_selectionnes) . ".";
+            
+            // Si après tous ces efforts, le texte est encore trop long
+            if (mb_strlen($resumeIntelligent) > $longueurMax) {
+                $resumeIntelligent = mb_substr($resumeIntelligent, 0, $longueurMax - 3) . "...";
+            }
+            
+            // Indiquer le taux de réduction
+            $pourcentage = round((mb_strlen($resumeIntelligent) / $longueurOriginale) * 100);
+            Log::info("Texte réduit de $longueurOriginale à " . mb_strlen($resumeIntelligent) . " caractères ($pourcentage%)");
+            
+            return $resumeIntelligent;
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la transformation du texte: ' . $e->getMessage());
+            return $texte;
         }
     }
 }

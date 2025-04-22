@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ProjetController extends Controller
 {
@@ -97,8 +98,17 @@ class ProjetController extends Controller
                     'statut' => 'en cours', // Statut par défaut
                 ]);
 
-                // Envoi de l'email de confirmation
-                Mail::to($projet->email)->send(new ProjetEnregistre($projet));
+                try {
+                    // Envoi de l'email de confirmation
+                    Mail::to($projet->email)->send(new ProjetEnregistre($projet));
+                } catch (\Exception $e) {
+                    Log::error('Erreur lors de l\'envoi de l\'email de confirmation: ' . $e->getMessage());
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Une erreur est survenue lors de l\'envoi de l\'email de confirmation',
+                        'error' => $e->getMessage()
+                    ], 500);
+                }
 
                 // Ajouter les URLs complètes pour les fichiers
                 $projet->cni_url = Storage::url($projet->cni);
@@ -110,6 +120,7 @@ class ProjetController extends Controller
                     'message' => 'Projet enregistré avec succès',
                     'data' => $projet
                 ], 201);
+
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -117,6 +128,7 @@ class ProjetController extends Controller
                     'error' => $e->getMessage()
                 ], 500);
             }
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
