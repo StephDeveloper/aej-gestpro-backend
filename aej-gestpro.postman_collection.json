@@ -1,0 +1,223 @@
+{
+	"info": {
+		"_postman_id": "0632add2-1144-4a7b-a144-2e567cafbc0a",
+		"name": "aej-gestpro",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "30671931"
+	},
+	"item": [
+		{
+			"name": "authentification",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"test\",\r\n    \"email\": \"test@gmail.com\",\r\n    \"password\": \"123456\",\r\n    \"password_confirmation\": \"123456\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "http://localhost:8000/api/register"
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"john.doe@example.com\",\r\n    \"password\": \"123456\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "http://localhost:8000/api/login"
+					},
+					"response": []
+				},
+				{
+					"name": "user profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "2|xpXWlQvqSOyZBY4mczTIAmqpB0G6eCXoakmNOM6Kb80c8efc"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "http://localhost:8000/api/user"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "projets",
+			"item": [
+				{
+					"name": "créer projet",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "nom",
+									"value": "n'da",
+									"type": "text"
+								},
+								{
+									"key": "prenoms",
+									"value": "yao stéphane",
+									"type": "text"
+								},
+								{
+									"key": "date_naissance",
+									"value": "1994-03-25",
+									"type": "text"
+								},
+								{
+									"key": "lieu_naissance",
+									"value": "Bouaké",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "ndayste@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "type_projet",
+									"value": "en développement",
+									"type": "text"
+								},
+								{
+									"key": "forme_juridique",
+									"value": "sa",
+									"type": "text"
+								},
+								{
+									"key": "num_cni",
+									"value": "CI001458962",
+									"type": "text"
+								},
+								{
+									"key": "cni",
+									"type": "file",
+									"src": "/C:/Users/DEV-HNACIS/Pictures/Capture tableau objet audit.png"
+								},
+								{
+									"key": "piece_identite",
+									"type": "file",
+									"src": "/C:/Users/DEV-HNACIS/Pictures/Screenshots/Capture d'écran 2024-12-02 121439.png"
+								},
+								{
+									"key": "plan_affaire",
+									"type": "file",
+									"src": "/C:/Users/DEV-HNACIS/Pictures/Screenshots/Mots clés Google Alerts.png"
+								}
+							]
+						},
+						"url": "http://localhost:8000/api/projets"
+					},
+					"response": []
+				},
+				{
+					"name": "get all projets",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "30|Un0XiiUDTbH5Rs0p4L08Bz4kwofkWlGyAdCpw1lt68c73e50"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "http://localhost:8000/api/projets"
+					},
+					"response": []
+				},
+				{
+					"name": "analyse IA des projets",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "11|cX4P5bQgfKxRdsktuH0vTo8sPWM9uO0WDvBjNksI25029aad"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "http://localhost:8000/api/projets/classement"
+					},
+					"response": []
+				},
+				{
+					"name": "Valider/Rejeter Projet",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "42|q7QkEpl9a5pJ6cQ5llYIpSNJ8If6ugoCbqYu0dLT14171b17"
+							}
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"statut\": \"Rejeté\",\r\n  \"justification\": \"Le projet manque de viabilité économique dans le contexte actuel du marché ivoirien. L'étude de marché est insuffisante et le plan financier présente des incohérences.\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "http://localhost:8000/api/projets/4"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get data for Dashboard",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "35|1X6qGhEwPMvZVphMbRvAsKpcCXBorw4CalQR4zM47d0ad848"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "http://localhost:8000/api/dashboard/stats"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
