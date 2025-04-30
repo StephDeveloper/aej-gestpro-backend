@@ -16,8 +16,8 @@ class UserController extends Controller
             // Validation des données
             $validator = Validator::make($request->all(), [
                 'username' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:6|confirmed',
             ]);
 
             if ($validator->fails()) {
@@ -42,6 +42,7 @@ class UserController extends Controller
                     'user' => $user
                 ]
             ], 201);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

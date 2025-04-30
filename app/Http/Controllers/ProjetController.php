@@ -99,6 +99,11 @@ class ProjetController extends Controller
                     'statut' => 'en cours', // Statut par défaut
                 ]);
 
+                // Ajouter les URLs complètes pour les fichiers
+                $projet->cni_url = Storage::url($projet->cni);
+                $projet->piece_identite_url = Storage::url($projet->piece_identite);
+                $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
+
                 try {
                     // Envoi de l'email de confirmation
                     Mail::to($projet->email)->send(new ProjetEnregistre($projet));
@@ -110,11 +115,6 @@ class ProjetController extends Controller
                         'error' => $e->getMessage()
                     ], 500);
                 }
-
-                // Ajouter les URLs complètes pour les fichiers
-                $projet->cni_url = Storage::url($projet->cni);
-                $projet->piece_identite_url = Storage::url($projet->piece_identite);
-                $projet->plan_affaire_url = Storage::url($projet->plan_affaire);
 
                 return response()->json([
                     'success' => true,
