@@ -79,13 +79,21 @@ class OllamaService
         try {
             $transformedText = $this->transformText($text, 1000);
             
-            $prompt = "Tu es un expert en analyse de plans d'affaires en Cote d'Ivoire avec une connaissance approfondie du marché local ivoirien. Analyse ce plan d'affaires {$transformedText} et évalue-le selon les critères suivants avec une note sur 100 pour chaque critère : 
-            Tu dois retourner un JSON valide avec les clés suivantes:
-            - note_globale: note moyenne sur 100
-            - criteres: un objet avec les notes pour chaque critère
-            - forces: un tableau de forces identifiées
-            - faiblesses: un tableau de faiblesses identifiées
-            - recommandations: une chaîne de recommandations détaillées adaptées au marché ivoirien, max 300 mots";
+            $prompt = "Tu es un expert en analyse de plans d'affaires en Cote d'Ivoire avec une connaissance approfondie du marché local ivoirien. Analyse ce plan d'affaires {$transformedText} et évalue-le selon les critères suivants avec une note sur 100 pour chaque critère.
+
+CRITÈRES D'ÉVALUATION (chaque critère doit être noté sévèrement, entre 0 et 20):
+1. Viabilité économique: Évalue si le modèle d'affaires est viable dans le contexte ivoirien (marges réalistes, prix adaptés au pouvoir d'achat local, coûts opérationnels réalistes)
+2. Innovation et différenciation: Évalue si l'offre se démarque des concurrents existants sur le marché ivoirien
+3. Conformité réglementaire: Vérifie si le projet respecte les lois et réglementations ivoiriennes (licences, autorisations, taxes)
+4. Stratégie financière: Analyse la cohérence des projections financières, ROI, et sources de financement
+5. Potentiel de croissance: Évalue les possibilités d'expansion et de scaling dans le contexte du marché ivoirien
+
+Tu dois retourner un JSON valide avec les clés suivantes:
+- note_globale: note moyenne sur 100 (sois très critique)
+- criteres: un objet avec les notes pour chaque critère suivant: viabilite_economique, innovation, conformite_reglementaire, strategie_financiere, potentiel_croissance
+- forces: un tableau de forces identifiées (maximum 3)
+- faiblesses: un tableau de faiblesses identifiées (maximum 3)
+- recommandations: une chaîne de recommandations détaillées adaptées au marché ivoirien, max 300 mots";
             
             // Vérifier si l'URL d'API est correcte et accessible
             $apiUrl = $this->baseUrl;
@@ -93,8 +101,8 @@ class OllamaService
             // Log de l'URL utilisée pour le debugging
             Log::info("Tentative de connexion à l'API Ollama: " . $apiUrl);
             
-            $response = Http::timeout(120)
-                ->connectTimeout(30)
+            $response = Http::timeout(120) // 2 minutes = 120 secondes
+                ->connectTimeout(60) // 1 minute = 60 secondes
                 ->withOptions([
                     'curl' => [
                         CURLOPT_TCP_KEEPALIVE => 1,
@@ -129,7 +137,7 @@ class OllamaService
                     Log::info("Tentative avec URL alternative: " . $altUrl);
                     
                     $response = Http::timeout(120)
-                        ->connectTimeout(30)
+                        ->connectTimeout(60)
                         ->retry(2, 1000)
                         ->post($altUrl, [
                             'model' => $this->model,
