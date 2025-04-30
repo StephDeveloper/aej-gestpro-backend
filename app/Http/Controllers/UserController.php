@@ -78,19 +78,22 @@ class UserController extends Controller
             }
 
             // Récupération de l'utilisateur
-            $user = User::where('email', $request->email)->firstOrFail();
+            // $user = User::where('email', $request->email)->firstOrFail();
             
             // Suppression des anciens tokens et création d'un nouveau
-            $user->tokens()->delete();
-            $token = $user->createToken('auth_token')->plainTextToken;
+            // $user->tokens()->delete();
+            // $token = $user->createToken('auth_token')->plainTextToken;
+
+            $token = $request->user()->createToken('token')->plainTextToken;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Authentification réussie',
-                'user' => $user,
+                'user' => Auth::user(),
                 'access_token' => $token,
                 'token_type' => 'Bearer',
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -106,10 +109,11 @@ class UserController extends Controller
             // Suppression du token actuel
             $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Déconnexion réussie'
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Déconnexion réussie'
+            ]);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

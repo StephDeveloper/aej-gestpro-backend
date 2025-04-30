@@ -33,7 +33,7 @@ class ProjetController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Liste des projets récupérée avec succès',
-                    'data' => $projets
+                'data' => $projets
             ], 200);
 
         } catch (\Exception $e) {
